@@ -28,17 +28,26 @@
       position: relative;
     }
     
-    #counter-iframe {
+    .counter-iframe {
       width: 100%;
       height: 100%;
       border: none;
       display: block;
+      position: absolute;
+      top: 0;
+      left: 0;
       opacity: 0;
-      transition: opacity 0.5s ease;
+      transition: opacity 0.8s ease;
     }
     
-    #counter-iframe.loaded {
+    .counter-iframe.visible {
       opacity: 1;
+      z-index: 2;
+    }
+    
+    .counter-iframe.hidden {
+      opacity: 0;
+      z-index: 1;
     }
     
     #loading-indicator {
@@ -70,19 +79,14 @@
       height: 6px;
       border-radius: 50%;
       background: #28a745;
-      opacity: 0.5;
+      opacity: 0.3;
       z-index: 10;
-      transition: opacity 0.3s ease;
+      transition: all 0.3s ease;
     }
     
     #refresh-indicator.active {
-      opacity: 1;
-      animation: pulse 1s ease-in-out;
-    }
-    
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.5); }
+      opacity: 0.8;
+      transform: scale(1.2);
     }
   </style>
 </head>
@@ -90,8 +94,18 @@
   <div id="widget-container">
     <div id="loading-indicator">Loading counter...</div>
     <div id="refresh-indicator"></div>
+    
+    <!-- Two iframes for seamless switching -->
     <iframe
-      id="counter-iframe"
+      id="counter-iframe-1"
+      class="counter-iframe"
+      title="Call Counter Widget"
+      src=""
+    ></iframe>
+    
+    <iframe
+      id="counter-iframe-2"
+      class="counter-iframe"
       title="Call Counter Widget"
       src=""
     ></iframe>
@@ -100,48 +114,92 @@
   <script>
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbymWr7cNmIRf08q6Axzg4EIectdIP7sht9fOBW2cWBaVUqAPB-bkPRtz6f58t1V5eA/exec';
     
-    const iframe = document.getElementById('counter-iframe');
+    const iframe1 = document.getElementById('counter-iframe-1');
+    const iframe2 = document.getElementById('counter-iframe-2');
     const loadingIndicator = document.getElementById('loading-indicator');
     const refreshIndicator = document.getElementById('refresh-indicator');
     
+    let activeIframe = iframe1;
+    let backgroundIframe = iframe2;
     let reloadInterval;
     let isFirstLoad = true;
+    
+    function swapIframes() {
+      // Swap which iframe is active
+      if (activeIframe === iframe1) {
+        activeIframe = iframe2;
+        backgroundIframe = iframe1;
+      } else {
+        activeIframe = iframe1;
+        backgroundIframe = iframe2;
+      }
+    }
     
     function loadCounter() {
       const timestamp = new Date().getTime();
       const url = `${SCRIPT_URL}?t=${timestamp}`;
       
-      // Show refresh indicator for subsequent loads
-      if (!isFirstLoad) {
+      if (isFirstLoad) {
+        // First load: just load the active iframe
+        activeIframe.src = url;
+      } else {
+        // Subsequent loads: load in background iframe, then fade it in
         refreshIndicator.classList.add('active');
-        setTimeout(() => refreshIndicator.classList.remove('active'), 1000);
+        
+        // Load new content in background iframe
+        backgroundIframe.src = url;
+        
+        // When background iframe loads, fade it in and hide the old one
+        backgroundIframe.onload = function() {
+          // Fade in the new iframe
+          backgroundIframe.classList.remove('hidden');
+          backgroundIframe.classList.add('visible');
+          
+          // Fade out the old iframe
+          activeIframe.classList.remove('visible');
+          activeIframe.classList.add('hidden');
+          
+          // Swap the references
+          swapIframes();
+          
+          // Remove refresh indicator
+          setTimeout(() => {
+            refreshIndicator.classList.remove('active');
+          }, 500);
+          
+          // Clean up the onload handler
+          backgroundIframe.onload = null;
+        };
       }
-      
-      iframe.src = url;
     }
     
-    iframe.addEventListener('load', function() {
+    // Handle first load
+    activeIframe.addEventListener('load', function() {
       if (isFirstLoad) {
-        // Smooth transition for first load
         setTimeout(() => {
-          iframe.classList.add('loaded');
+          activeIframe.classList.add('visible');
           loadingIndicator.classList.add('hidden');
           isFirstLoad = false;
         }, 200);
       }
     });
     
-    iframe.addEventListener('error', function() {
+    // Error handling
+    function handleError() {
       loadingIndicator.textContent = 'Connection error';
       loadingIndicator.style.color = '#dc3545';
-    });
+      loadingIndicator.classList.remove('hidden');
+    }
+    
+    iframe1.addEventListener('error', handleError);
+    iframe2.addEventListener('error', handleError);
     
     // Start auto-refresh every 5 seconds
     function startAutoReload() {
       reloadInterval = setInterval(loadCounter, 5000);
     }
     
-    // Pause when page is hidden (performance)
+    // Pause when page is hidden
     document.addEventListener('visibilitychange', function() {
       if (document.hidden) {
         clearInterval(reloadInterval);
