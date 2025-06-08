@@ -1,186 +1,123 @@
-<!DOCTYPE html>
-<html lang="en">
+// 1) Read & display current count and last increment timestamp
+function doGet(e) {
+  const props = PropertiesService.getScriptProperties();
+  const count = parseInt(props.getProperty('callCount') || '0', 10);
+  const lastIncrement = props.getProperty('lastIncrement');
+  
+  // Format timestamp for display
+  let timeDisplay = '';
+  if (lastIncrement) {
+    const date = new Date(parseInt(lastIncrement));
+    const now = new Date();
+    const diffMinutes = Math.floor((now - date) / (1000 * 60));
+    
+    if (diffMinutes < 1) {
+      timeDisplay = 'Just now';
+    } else if (diffMinutes < 60) {
+      timeDisplay = `${diffMinutes}m ago`;
+    } else if (diffMinutes < 1440) {
+      const hours = Math.floor(diffMinutes / 60);
+      timeDisplay = `${hours}h ago`;
+    } else {
+      timeDisplay = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    }
+  } else {
+    timeDisplay = 'No calls yet';
+  }
+
+  const html = `<!DOCTYPE html>
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Sierra Transfer Counter</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    html, body {
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      text-align: center;
+      padding: 20px;
       margin: 0;
-      padding: 0;
-      height: 100%;
-      overflow: hidden;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: #f8f9fa;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    }
-    
-    #widget-container {
-      width: 400px;  
-      height: 280px;
       background: white;
-      border-radius: 8px;
-      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-      border: 1px solid #e1e5e9;
       overflow: hidden;
-      position: relative;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
     }
-    
-    #counter-iframe {
-      width: 120%;
-      height: 120%;
-      border: none;
-      position: absolute;
-      top: 0;
-      left: 0;
-      overflow: hidden;
-      scrollbar-width: none;
-      -ms-overflow-style: none;
+    .label {
+      font-size: 0.8em;
+      color: #868e96;
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
-    
-    #counter-iframe::-webkit-scrollbar {
-      display: none;
-      width: 0;
-      height: 0;
+    .count {
+      font-size: 4em;
+      font-weight: bold;
+      color: #2c3e50;
+      margin: 0;
+      line-height: 1;
     }
-    
-    #loading-indicator {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
+    .timestamp {
+      font-size: 0.9em;
       color: #6c757d;
-      font-size: 14px;
-      z-index: 10;
-    }
-    
-    #status-indicator {
-      position: absolute;
-      top: 12px;
-      right: 12px;
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      background: #28a745;
-      z-index: 10;
-      opacity: 0.7;
-      cursor: pointer;
-    }
-    
-    #refresh-button {
-      position: absolute;
-      top: 8px;
-      left: 12px;
-      background: #6c757d;
-      border: none;
-      color: white;
-      padding: 4px 8px;
-      border-radius: 4px;
-      font-size: 10px;
-      cursor: pointer;
-      z-index: 10;
-      opacity: 0.7;
-    }
-    
-    #refresh-button:hover {
-      opacity: 1;
-      background: #495057;
-    }
-    
-    .loaded #loading-indicator {
-      display: none;
-    }
-    
-    .error #status-indicator {
-      background: #dc3545;
+      margin-top: 8px;
+      font-weight: normal;
     }
   </style>
 </head>
 <body>
-  <div id="widget-container">
-    <div id="loading-indicator">Loading counter...</div>
-    <button id="refresh-button" title="Manual refresh">↻</button>
-    <div id="status-indicator" title="Connection status - click to refresh"></div>
-    <iframe
-      id="counter-iframe"
-      src="https://script.google.com/macros/s/AKfycbymWr7cNmIRf08q6Axzg4EIectdIP7sht9fOBW2cWBaVUqAPB-bkPRtz6f58t1V5eA/exec"
-      title="Call Counter Widget"
-      scrolling="no"
-      frameborder="0"
-    ></iframe>
-  </div>
-
+  <div class="label">Transfer Count</div>
+  <div class="count">${count}</div>
+  <div class="timestamp">Last: ${timeDisplay}</div>
+  
   <script>
-    const iframe = document.getElementById('counter-iframe');
-    const container = document.getElementById('widget-container');
-    const refreshButton = document.getElementById('refresh-button');
-    let reloadInterval;
-    
-    iframe.addEventListener('load', function() {
-      container.classList.add('loaded');
-      container.classList.remove('error');
-      
-      try {
-        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
-        if (iframeDoc) {
-          const style = iframeDoc.createElement('style');
-          style.textContent = `
-            html, body {
-              margin: 0 !important;
-              padding: 0 !important;
-              overflow: hidden !important;
-              scrollbar-width: none !important;
-              -ms-overflow-style: none !important;
-            }
-            *::-webkit-scrollbar {
-              display: none !important;
-            }
-          `;
-          iframeDoc.head.appendChild(style);
-        }
-      } catch (e) {
-        console.log('CORS Issue');
-      }
-    });
-    
-    iframe.addEventListener('error', function() {
-      container.classList.add('error');
-    });
-    
-    function reloadCounter() {
-      try {
-        const timestamp = new Date().getTime();
-        const baseUrl = 'https://script.google.com/macros/s/AKfycbymWr7cNmIRf08q6Axzg4EIectdIP7sht9fOBW2cWBaVUqAPB-bkPRtz6f58t1V5eA/exec';
-        iframe.src = `${baseUrl}?t=${timestamp}`;
-      } catch (error) {
-        console.error('Error reloading counter:', error);
-        container.classList.add('error');
-      }
-    }
-    
-    // Auto-reload every 5 seconds
-    reloadInterval = setInterval(reloadCounter, 5000);
-    
-    // Manual refresh buttons
-    document.getElementById('status-indicator').addEventListener('click', reloadCounter);
-    refreshButton.addEventListener('click', reloadCounter);
-    
-    // Prevent page scrolling
-    window.addEventListener('scroll', function(e) {
-      e.preventDefault();
-      window.scrollTo(0, 0);
-    });
-    
-    // Pause auto-refresh when page is hidden
-    document.addEventListener('visibilitychange', function() {
-      if (document.hidden) {
-        clearInterval(reloadInterval);
-      } else {
-        reloadInterval = setInterval(reloadCounter, 5000);
-      }
-    });
+    // Auto-refresh every 5 seconds using location.reload
+    setTimeout(function() {
+      window.location.reload();
+    }, 5000);
   </script>
 </body>
-</html>
+</html>`;
+
+  return HtmlService
+    .createHtmlOutput(html)
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+}
+
+// 2) Increment counter and store timestamp  
+function doPost(e) {
+  const props = PropertiesService.getScriptProperties();
+  const current = parseInt(props.getProperty('callCount') || '0', 10);
+  const updated = current + 1;
+  const timestamp = new Date().getTime();
+  
+  props.setProperties({
+    'callCount': updated.toString(),
+    'lastIncrement': timestamp.toString()
+  });
+
+  return ContentService
+    .createTextOutput(JSON.stringify({ 
+      count: updated, 
+      timestamp: timestamp,
+      timeFormatted: new Date(timestamp).toISOString()
+    }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+// 3) Reset counter and clear timestamp
+function resetCounter() {
+  const props = PropertiesService.getScriptProperties();
+  props.setProperties({
+    'callCount': '0',
+    'lastIncrement': null
+  });
+  
+  return ContentService
+    .createTextOutput(JSON.stringify({ 
+      count: 0, 
+      message: 'Counter and timestamp reset' 
+    }))
+    .setMimeType(ContentService.MimeType.JSON);
+}
