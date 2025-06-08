@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>IVR Transfer Counter</title>
+  <title>Sierra Transfer Counter</title>
   <style>
     html, body {
       margin: 0;
@@ -18,8 +18,8 @@
     }
     
     #widget-container {
-      width: 350px;
-      height: 250px;
+      width: 400px;  
+      height: 280px;
       background: white;
       border-radius: 8px;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -66,6 +66,27 @@
       background: #28a745;
       z-index: 10;
       opacity: 0.7;
+      cursor: pointer;
+    }
+    
+    #refresh-button {
+      position: absolute;
+      top: 8px;
+      left: 12px;
+      background: #6c757d;
+      border: none;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      cursor: pointer;
+      z-index: 10;
+      opacity: 0.7;
+    }
+    
+    #refresh-button:hover {
+      opacity: 1;
+      background: #495057;
     }
     
     .loaded #loading-indicator {
@@ -80,7 +101,8 @@
 <body>
   <div id="widget-container">
     <div id="loading-indicator">Loading counter...</div>
-    <div id="status-indicator" title="Connection status"></div>
+    <button id="refresh-button" title="Manual refresh">↻</button>
+    <div id="status-indicator" title="Connection status - click to refresh"></div>
     <iframe
       id="counter-iframe"
       src="https://script.google.com/macros/s/AKfycbymWr7cNmIRf08q6Axzg4EIectdIP7sht9fOBW2cWBaVUqAPB-bkPRtz6f58t1V5eA/exec"
@@ -93,6 +115,7 @@
   <script>
     const iframe = document.getElementById('counter-iframe');
     const container = document.getElementById('widget-container');
+    const refreshButton = document.getElementById('refresh-button');
     let reloadInterval;
     
     iframe.addEventListener('load', function() {
@@ -118,7 +141,7 @@
           iframeDoc.head.appendChild(style);
         }
       } catch (e) {
-        console.log('Cross-origin restrictions prevent iframe modification');
+        console.log('CORS Issue');
       }
     });
     
@@ -137,13 +160,26 @@
       }
     }
     
+    // Auto-reload every 5 seconds
     reloadInterval = setInterval(reloadCounter, 5000);
     
+    // Manual refresh buttons
     document.getElementById('status-indicator').addEventListener('click', reloadCounter);
+    refreshButton.addEventListener('click', reloadCounter);
     
+    // Prevent page scrolling
     window.addEventListener('scroll', function(e) {
       e.preventDefault();
       window.scrollTo(0, 0);
+    });
+    
+    // Pause auto-refresh when page is hidden
+    document.addEventListener('visibilitychange', function() {
+      if (document.hidden) {
+        clearInterval(reloadInterval);
+      } else {
+        reloadInterval = setInterval(reloadCounter, 5000);
+      }
     });
   </script>
 </body>
