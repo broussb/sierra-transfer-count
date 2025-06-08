@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>IVR Transfer Counter</title>
+  <title>Sierra Transfer Counter</title>
   <style>
     html, body {
       margin: 0;
@@ -70,7 +70,37 @@
       pointer-events: none;
     }
     
-    /* Subtle refresh indicator */
+    #reset-button {
+      position: absolute;
+      bottom: 12px;
+      left: 12px;
+      background: #dc3545;
+      border: none;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 4px;
+      font-size: 11px;
+      cursor: pointer;
+      z-index: 10;
+      opacity: 0.7;
+      transition: all 0.3s ease;
+    }
+    
+    #reset-button:hover {
+      opacity: 1;
+      background: #c82333;
+      transform: translateY(-1px);
+    }
+    
+    #reset-button:active {
+      transform: translateY(0);
+    }
+    
+    #reset-button.resetting {
+      background: #6c757d;
+      cursor: not-allowed;
+    }
+    
     #refresh-indicator {
       position: absolute;
       top: 12px;
@@ -88,14 +118,41 @@
       opacity: 0.8;
       transform: scale(1.2);
     }
+    
+    #reset-iframe {
+      display: none;
+    }
+    
+    #reset-confirmation {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: white;
+      border: 2px solid #28a745;
+      border-radius: 8px;
+      padding: 15px;
+      color: #28a745;
+      font-size: 14px;
+      font-weight: bold;
+      z-index: 15;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+    }
+    
+    #reset-confirmation.show {
+      opacity: 1;
+    }
   </style>
 </head>
 <body>
   <div id="widget-container">
     <div id="loading-indicator">Loading counter...</div>
     <div id="refresh-indicator"></div>
+    <button id="reset-button" title="Reset counter to zero">Reset</button>
+    <div id="reset-confirmation">✓ Counter Reset!</div>
     
-    <!-- Two iframes for seamless switching -->
     <iframe
       id="counter-iframe-1"
       class="counter-iframe"
@@ -109,6 +166,8 @@
       title="Call Counter Widget"
       src=""
     ></iframe>
+    
+    <iframe id="reset-iframe" src=""></iframe>
   </div>
 
   <script>
@@ -116,8 +175,11 @@
     
     const iframe1 = document.getElementById('counter-iframe-1');
     const iframe2 = document.getElementById('counter-iframe-2');
+    const resetIframe = document.getElementById('reset-iframe');
     const loadingIndicator = document.getElementById('loading-indicator');
     const refreshIndicator = document.getElementById('refresh-indicator');
+    const resetButton = document.getElementById('reset-button');
+    const resetConfirmation = document.getElementById('reset-confirmation');
     
     let activeIframe = iframe1;
     let backgroundIframe = iframe2;
@@ -125,7 +187,6 @@
     let isFirstLoad = true;
     
     function swapIframes() {
-      // Swap which iframe is active
       if (activeIframe === iframe1) {
         activeIframe = iframe2;
         backgroundIframe = iframe1;
@@ -140,40 +201,63 @@
       const url = `${SCRIPT_URL}?t=${timestamp}`;
       
       if (isFirstLoad) {
-        // First load: just load the active iframe
         activeIframe.src = url;
       } else {
-        // Subsequent loads: load in background iframe, then fade it in
         refreshIndicator.classList.add('active');
         
-        // Load new content in background iframe
         backgroundIframe.src = url;
         
-        // When background iframe loads, fade it in and hide the old one
         backgroundIframe.onload = function() {
-          // Fade in the new iframe
           backgroundIframe.classList.remove('hidden');
           backgroundIframe.classList.add('visible');
           
-          // Fade out the old iframe
           activeIframe.classList.remove('visible');
           activeIframe.classList.add('hidden');
           
-          // Swap the references
           swapIframes();
           
-          // Remove refresh indicator
           setTimeout(() => {
             refreshIndicator.classList.remove('active');
           }, 500);
           
-          // Clean up the onload handler
           backgroundIframe.onload = null;
         };
       }
     }
     
-    // Handle first load
+    function resetCounter() {
+      if (resetButton.classList.contains('resetting')) return;
+      
+      resetButton.classList.add('resetting');
+      resetButton.textContent = 'Resetting...';
+      
+      const resetUrl = `${SCRIPT_URL}?action=reset&t=${new Date().getTime()}`;
+      resetIframe.src = resetUrl;
+      
+      window.addEventListener('message', function(event) {
+        if (event.data === 'reset-complete') {
+          resetButton.classList.remove('resetting');
+          resetButton.textContent = 'Reset';
+          resetConfirmation.classList.add('show');
+          
+          setTimeout(() => {
+            resetConfirmation.classList.remove('show');
+          }, 2000);
+          
+          setTimeout(() => {
+            loadCounter();
+          }, 500);
+        }
+      });
+      
+      setTimeout(() => {
+        resetButton.classList.remove('resetting');
+        resetButton.textContent = 'Reset';
+      }, 5000);
+    }
+    
+    resetButton.addEventListener('click', resetCounter);
+    
     activeIframe.addEventListener('load', function() {
       if (isFirstLoad) {
         setTimeout(() => {
@@ -184,7 +268,6 @@
       }
     });
     
-    // Error handling
     function handleError() {
       loadingIndicator.textContent = 'Connection error';
       loadingIndicator.style.color = '#dc3545';
@@ -194,12 +277,10 @@
     iframe1.addEventListener('error', handleError);
     iframe2.addEventListener('error', handleError);
     
-    // Start auto-refresh every 5 seconds
     function startAutoReload() {
       reloadInterval = setInterval(loadCounter, 5000);
     }
     
-    // Pause when page is hidden
     document.addEventListener('visibilitychange', function() {
       if (document.hidden) {
         clearInterval(reloadInterval);
@@ -208,11 +289,9 @@
       }
     });
     
-    // Initial load
     loadCounter();
     startAutoReload();
     
-    // Suppress Google security warnings
     const originalConsoleError = console.error;
     console.error = function(...args) {
       const message = args.join(' ');
