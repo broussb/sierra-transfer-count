@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Sierra Transfer Counter</title>
+  <title>IVR Transfer Counter</title>
   <style>
     html, body {
       margin: 0;
@@ -34,7 +34,7 @@
       border: none;
       display: block;
       opacity: 0;
-      transition: opacity 0.3s ease;
+      transition: opacity 0.5s ease;
     }
     
     #counter-iframe.loaded {
@@ -53,38 +53,108 @@
       padding: 10px;
       border-radius: 4px;
       opacity: 1;
-      transition: opacity 0.3s ease;
+      transition: opacity 0.5s ease;
     }
     
     #loading-indicator.hidden {
       opacity: 0;
       pointer-events: none;
     }
+    
+    /* Subtle refresh indicator */
+    #refresh-indicator {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #28a745;
+      opacity: 0.5;
+      z-index: 10;
+      transition: opacity 0.3s ease;
+    }
+    
+    #refresh-indicator.active {
+      opacity: 1;
+      animation: pulse 1s ease-in-out;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.5); }
+    }
   </style>
 </head>
 <body>
   <div id="widget-container">
     <div id="loading-indicator">Loading counter...</div>
+    <div id="refresh-indicator"></div>
     <iframe
       id="counter-iframe"
       title="Call Counter Widget"
-      src="https://script.google.com/macros/s/AKfycbymWr7cNmIRf08q6Axzg4EIectdIP7sht9fOBW2cWBaVUqAPB-bkPRtz6f58t1V5eA/exec"
+      src=""
     ></iframe>
   </div>
 
   <script>
+    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbymWr7cNmIRf08q6Axzg4EIectdIP7sht9fOBW2cWBaVUqAPB-bkPRtz6f58t1V5eA/exec';
+    
     const iframe = document.getElementById('counter-iframe');
     const loadingIndicator = document.getElementById('loading-indicator');
+    const refreshIndicator = document.getElementById('refresh-indicator');
     
-    // Handle initial load with smooth transition
+    let reloadInterval;
+    let isFirstLoad = true;
+    
+    function loadCounter() {
+      const timestamp = new Date().getTime();
+      const url = `${SCRIPT_URL}?t=${timestamp}`;
+      
+      // Show refresh indicator for subsequent loads
+      if (!isFirstLoad) {
+        refreshIndicator.classList.add('active');
+        setTimeout(() => refreshIndicator.classList.remove('active'), 1000);
+      }
+      
+      iframe.src = url;
+    }
+    
     iframe.addEventListener('load', function() {
-      setTimeout(() => {
-        iframe.classList.add('loaded');
-        loadingIndicator.classList.add('hidden');
-      }, 100); // Small delay for smooth transition
+      if (isFirstLoad) {
+        // Smooth transition for first load
+        setTimeout(() => {
+          iframe.classList.add('loaded');
+          loadingIndicator.classList.add('hidden');
+          isFirstLoad = false;
+        }, 200);
+      }
     });
     
-    // Suppress Google security warnings in console
+    iframe.addEventListener('error', function() {
+      loadingIndicator.textContent = 'Connection error';
+      loadingIndicator.style.color = '#dc3545';
+    });
+    
+    // Start auto-refresh every 5 seconds
+    function startAutoReload() {
+      reloadInterval = setInterval(loadCounter, 5000);
+    }
+    
+    // Pause when page is hidden (performance)
+    document.addEventListener('visibilitychange', function() {
+      if (document.hidden) {
+        clearInterval(reloadInterval);
+      } else {
+        startAutoReload();
+      }
+    });
+    
+    // Initial load
+    loadCounter();
+    startAutoReload();
+    
+    // Suppress Google security warnings
     const originalConsoleError = console.error;
     console.error = function(...args) {
       const message = args.join(' ');
@@ -93,12 +163,6 @@
       }
       originalConsoleError.apply(console, args);
     };
-    
-    // Handle any iframe errors
-    iframe.addEventListener('error', function() {
-      loadingIndicator.textContent = 'Connection error';
-      loadingIndicator.style.color = '#dc3545';
-    });
   </script>
 </body>
 </html>
