@@ -18,8 +18,8 @@
     }
     
     #widget-container {
-      width: 400px;
-      height: 280px;
+      width: 450px;
+      height: 320px;
       background: white;
       border-radius: 8px;
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
@@ -70,18 +70,39 @@
       pointer-events: none;
     }
     
-    #reset-button {
+    #controls {
       position: absolute;
-      bottom: 12px;
-      left: 12px;
+      top: 8px;
+      left: 8px;
+      z-index: 10;
+      display: flex;
+      gap: 4px;
+    }
+    
+    #campaign-select {
+      background: #007bff;
+      border: none;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 10px;
+      cursor: pointer;
+      opacity: 0.8;
+      max-width: 120px;
+    }
+    
+    #campaign-select:hover {
+      opacity: 1;
+    }
+    
+    #reset-button {
       background: #dc3545;
       border: none;
       color: white;
-      padding: 6px 12px;
+      padding: 4px 8px;
       border-radius: 4px;
-      font-size: 11px;
+      font-size: 10px;
       cursor: pointer;
-      z-index: 10;
       opacity: 0.7;
       transition: all 0.3s ease;
     }
@@ -89,11 +110,6 @@
     #reset-button:hover {
       opacity: 1;
       background: #c82333;
-      transform: translateY(-1px);
-    }
-    
-    #reset-button:active {
-      transform: translateY(0);
     }
     
     #reset-button.resetting {
@@ -150,8 +166,15 @@
   <div id="widget-container">
     <div id="loading-indicator">Loading counter...</div>
     <div id="refresh-indicator"></div>
-    <button id="reset-button" title="Reset counter to zero">Reset</button>
-    <div id="reset-confirmation">✓ Counter Reset!</div>
+    
+    <div id="controls">
+      <select id="campaign-select" title="Select campaign view">
+        <option value="total">Total View</option>
+      </select>
+      <button id="reset-button" title="Reset counter">Reset</button>
+    </div>
+    
+    <div id="reset-confirmation">✓ Reset Complete!</div>
     
     <iframe
       id="counter-iframe-1"
@@ -180,11 +203,13 @@
     const refreshIndicator = document.getElementById('refresh-indicator');
     const resetButton = document.getElementById('reset-button');
     const resetConfirmation = document.getElementById('reset-confirmation');
+    const campaignSelect = document.getElementById('campaign-select');
     
     let activeIframe = iframe1;
     let backgroundIframe = iframe2;
     let reloadInterval;
     let isFirstLoad = true;
+    let availableCampaigns = [];
     
     function swapIframes() {
       if (activeIframe === iframe1) {
@@ -198,7 +223,12 @@
     
     function loadCounter() {
       const timestamp = new Date().getTime();
-      const url = `${SCRIPT_URL}?t=${timestamp}`;
+      const selectedCampaign = campaignSelect.value;
+      let url = `${SCRIPT_URL}?t=${timestamp}`;
+      
+      if (selectedCampaign !== 'total') {
+        url += `&campaign=${encodeURIComponent(selectedCampaign)}`;
+      }
       
       if (isFirstLoad) {
         activeIframe.src = url;
@@ -228,18 +258,29 @@
     function resetCounter() {
       if (resetButton.classList.contains('resetting')) return;
       
+      const selectedCampaign = campaignSelect.value;
+      const resetScope = selectedCampaign === 'total' ? 'all' : selectedCampaign;
+      
+      if (!confirm(`Reset ${selectedCampaign === 'total' ? 'ALL campaigns' : `campaign "${selectedCampaign}"`}?`)) {
+        return;
+      }
+      
       resetButton.classList.add('resetting');
       resetButton.textContent = 'Resetting...';
       
-      const resetUrl = `${SCRIPT_URL}?action=reset&t=${new Date().getTime()}`;
+      let resetUrl = `${SCRIPT_URL}?action=reset&t=${new Date().getTime()}`;
+      if (resetScope !== 'all') {
+        resetUrl += `&campaign=${encodeURIComponent(resetScope)}`;
+      }
+      
       resetIframe.src = resetUrl;
       
       window.addEventListener('message', function(event) {
         if (event.data === 'reset-complete') {
           resetButton.classList.remove('resetting');
           resetButton.textContent = 'Reset';
-          resetConfirmation.classList.add('show');
           
+          resetConfirmation.classList.add('show');
           setTimeout(() => {
             resetConfirmation.classList.remove('show');
           }, 2000);
@@ -257,6 +298,7 @@
     }
     
     resetButton.addEventListener('click', resetCounter);
+    campaignSelect.addEventListener('change', loadCounter);
     
     activeIframe.addEventListener('load', function() {
       if (isFirstLoad) {
