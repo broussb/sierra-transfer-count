@@ -1,10 +1,8 @@
-// 1) Read & display current count and last increment timestamp
 function doGet(e) {
   const props = PropertiesService.getScriptProperties();
   const count = parseInt(props.getProperty('callCount') || '0', 10);
   const lastIncrement = props.getProperty('lastIncrement');
   
-  // Format timestamp for display
   let timeDisplay = '';
   if (lastIncrement) {
     const date = new Date(parseInt(lastIncrement));
