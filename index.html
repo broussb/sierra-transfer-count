@@ -5,15 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>IVR Transfer Counter</title>
   <style>
-    /* Reset and base styles */
-    * {
-      box-sizing: border-box;
-    }
-    
     html, body {
       margin: 0;
       padding: 0;
-      height: 100vh;
+      height: 100%;
       overflow: hidden;
       display: flex;
       align-items: center;
@@ -22,10 +17,9 @@
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     }
     
-    /* Container with better sizing and styling */
     #widget-container {
-      width: 300px;
-      height: 200px;
+      width: 350px;  /* Made even larger */
+      height: 250px; /* Made even larger */
       background: white;
       border-radius: 12px;
       box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
@@ -34,18 +28,35 @@
       border: 2px solid rgba(255, 255, 255, 0.2);
     }
     
-    /* Iframe with comprehensive scroll prevention */
     #counter-iframe {
+      width: 120%;     /* Oversized to push scroll bars outside visible area */
+      height: 120%;    /* Oversized to push scroll bars outside visible area */
+      border: none;
+      position: absolute;
+      top: 0;
+      left: 0;
+      /* Force hide scroll bars using multiple methods */
+      overflow: hidden;
+      scrollbar-width: none;  /* Firefox */
+      -ms-overflow-style: none;  /* IE/Edge */
+    }
+    
+    /* Hide scroll bars in WebKit browsers */
+    #counter-iframe::-webkit-scrollbar {
+      display: none;
+      width: 0;
+      height: 0;
+    }
+    
+    /* Mask to clip the oversized iframe */
+    #iframe-mask {
+      position: absolute;
+      top: 0;
+      left: 0;
       width: 100%;
       height: 100%;
-      border: none;
-      display: block;
-      /* Prevent scrolling using multiple methods */
       overflow: hidden;
-      scrolling: no;
-      /* Ensure iframe fills container exactly */
-      margin: 0;
-      padding: 0;
+      pointer-events: none;
     }
     
     /* Loading indicator */
@@ -56,7 +67,7 @@
       transform: translate(-50%, -50%);
       color: #666;
       font-size: 14px;
-      z-index: 1;
+      z-index: 10;
     }
     
     /* Status indicator */
@@ -68,7 +79,7 @@
       height: 8px;
       border-radius: 50%;
       background: #4CAF50;
-      z-index: 2;
+      z-index: 10;
       animation: pulse 2s infinite;
     }
     
@@ -78,12 +89,6 @@
       100% { opacity: 1; }
     }
     
-    /* Error state */
-    .error #status-indicator {
-      background: #f44336;
-    }
-    
-    /* Hide loading when iframe loads */
     .loaded #loading-indicator {
       display: none;
     }
@@ -97,98 +102,80 @@
       id="counter-iframe"
       src="https://script.google.com/macros/s/AKfycbymWr7cNmIRf08q6Axzg4EIectdIP7sht9fOBW2cWBaVUqAPB-bkPRtz6f58t1V5eA/exec"
       title="Call Counter Widget"
-      sandbox="allow-scripts allow-same-origin"
-      loading="lazy"
+      scrolling="no"
+      frameborder="0"
     ></iframe>
+    <div id="iframe-mask"></div>
   </div>
 
   <script>
     const iframe = document.getElementById('counter-iframe');
     const container = document.getElementById('widget-container');
-    const statusIndicator = document.getElementById('status-indicator');
     let reloadInterval;
     
-    // Handle iframe load
     iframe.addEventListener('load', function() {
       container.classList.add('loaded');
-      container.classList.remove('error');
-      console.log('Counter loaded successfully');
       
-      // Try to apply additional styles to prevent scrolling within iframe
+      // Try to hide scroll bars in the iframe content
       try {
-        const iframeDoc = iframe.contentDocument || iframe.contentWindow.document;
+        const iframeWindow = iframe.contentWindow;
+        const iframeDoc = iframe.contentDocument || iframeWindow.document;
+        
         if (iframeDoc) {
+          // Inject aggressive anti-scroll CSS
           const style = iframeDoc.createElement('style');
           style.textContent = `
-            body { 
-              margin: 0 !important; 
-              padding: 8px !important; 
-              overflow: hidden !important; 
-              box-sizing: border-box !important;
-              height: 100vh !important;
+            html, body {
+              margin: 0 !important;
+              padding: 0 !important;
+              overflow: hidden !important;
+              scrollbar-width: none !important;
+              -ms-overflow-style: none !important;
+              height: auto !important;
+              max-height: none !important;
             }
-            * { 
-              overflow: hidden !important; 
-              box-sizing: border-box !important;
+            *::-webkit-scrollbar {
+              display: none !important;
+              width: 0 !important;
+              height: 0 !important;
+            }
+            * {
+              overflow: hidden !important;
+              scrollbar-width: none !important;
+              -ms-overflow-style: none !important;
             }
           `;
           iframeDoc.head.appendChild(style);
+          
+          // Also try to set styles directly on body
+          if (iframeDoc.body) {
+            iframeDoc.body.style.overflow = 'hidden';
+            iframeDoc.body.style.margin = '0';
+            iframeDoc.body.style.padding = '0';
+          }
         }
       } catch (e) {
-        // Cross-origin restrictions - this is expected
-        console.log('Cannot modify iframe styles due to cross-origin policy');
+        console.log('Cross-origin restrictions prevent iframe modification');
       }
     });
     
-    // Handle iframe errors
-    iframe.addEventListener('error', function() {
-      container.classList.add('error');
-      console.error('Failed to load counter');
-    });
-    
-    // Improved reload function with error handling
     function reloadCounter() {
       try {
-        // Create a new iframe source URL with timestamp to prevent caching
         const timestamp = new Date().getTime();
         const baseUrl = 'https://script.google.com/macros/s/AKfycbymWr7cNmIRf08q6Axzg4EIectdIP7sht9fOBW2cWBaVUqAPB-bkPRtz6f58t1V5eA/exec';
         iframe.src = `${baseUrl}?t=${timestamp}`;
       } catch (error) {
         console.error('Error reloading counter:', error);
-        container.classList.add('error');
       }
     }
     
-    // Start auto-reload with better error handling
-    function startAutoReload() {
-      reloadInterval = setInterval(reloadCounter, 5000);
-    }
+    // Auto-reload every 5 seconds
+    reloadInterval = setInterval(reloadCounter, 5000);
     
-    // Stop auto-reload when page is hidden (performance optimization)
-    document.addEventListener('visibilitychange', function() {
-      if (document.hidden) {
-        clearInterval(reloadInterval);
-      } else {
-        startAutoReload();
-      }
-    });
+    // Manual refresh on status click
+    document.getElementById('status-indicator').addEventListener('click', reloadCounter);
     
-    // Initialize auto-reload
-    startAutoReload();
-    
-    // Manual refresh on click (for debugging)
-    statusIndicator.addEventListener('click', function() {
-      reloadCounter();
-    });
-    
-    // Prevent any potential scroll events on the container
-    container.addEventListener('scroll', function(e) {
-      e.preventDefault();
-      container.scrollTop = 0;
-      container.scrollLeft = 0;
-    });
-    
-    // Additional protection against scrolling
+    // Prevent page scrolling
     window.addEventListener('scroll', function(e) {
       e.preventDefault();
       window.scrollTo(0, 0);
