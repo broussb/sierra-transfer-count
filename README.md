@@ -64,6 +64,30 @@ Create the following tables in your Supabase project:
    );
    ```
 
+3. **increment_campaign** stored procedure:
+   ```sql
+   CREATE OR REPLACE FUNCTION increment_campaign(campaign_name TEXT)
+   RETURNS VOID AS $$
+   BEGIN
+     -- Insert or update campaign
+     INSERT INTO campaigns (name, count, updated_at)
+     VALUES (campaign_name, 1, NOW())
+     ON CONFLICT (name) 
+     DO UPDATE SET 
+       count = campaigns.count + 1,
+       updated_at = NOW();
+     
+     -- Update total count
+     UPDATE totals 
+     SET 
+       total_count = (SELECT SUM(count) FROM campaigns),
+       last_increment = NOW(),
+       updated_at = NOW()
+     WHERE id = 1;
+   END;
+   $$ LANGUAGE plpgsql;
+   ```
+
 ## Deployment
 
 1. Push your code to GitHub

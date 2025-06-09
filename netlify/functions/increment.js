@@ -1,9 +1,13 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
-)
+// Check for required environment variables
+const SUPABASE_URL = process.env.SUPABASE_URL
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY
+
+// Only create the client if we have the required variables
+const supabase = SUPABASE_URL && SUPABASE_ANON_KEY 
+  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null
 
 export const handler = async (event, context) => {
   const headers = {
@@ -21,6 +25,18 @@ export const handler = async (event, context) => {
       statusCode: 405,
       headers,
       body: JSON.stringify({ error: 'Method not allowed' })
+    }
+  }
+
+  // Check if Supabase is properly configured
+  if (!supabase) {
+    return {
+      statusCode: 500,
+      headers,
+      body: JSON.stringify({ 
+        error: 'Service unavailable',
+        message: 'Database connection not configured. Please set SUPABASE_URL and SUPABASE_ANON_KEY environment variables.'
+      })
     }
   }
 
@@ -50,14 +66,14 @@ export const handler = async (event, context) => {
       return {
         statusCode: 500,
         headers,
-        body: JSON.stringify({ error: 'Database error' })
+        body: JSON.stringify({ error: 'Database error', details: error.message })
       }
     }
 
     return {
       statusCode: 200,
-      headers,
-      body: 'OK'
+      headers: { ...headers, 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
     }
   } catch (error) {
     console.error('Function error:', error)
