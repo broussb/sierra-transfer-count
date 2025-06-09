@@ -6,7 +6,6 @@ const supabase = createClient(
 )
 
 export const handler = async (event, context) => {
-  // CORS headers
   const headers = {
     'Access-Control-Allow-Origin': '*',
     'Access-Control-Allow-Headers': 'Content-Type',
@@ -26,7 +25,6 @@ export const handler = async (event, context) => {
   }
 
   try {
-    // Parse campaign from body or query params
     let campaign = 'default'
     
     if (event.body) {
@@ -34,18 +32,15 @@ export const handler = async (event, context) => {
         const parsed = JSON.parse(event.body)
         campaign = parsed.campaign || campaign
       } catch {
-        // If JSON parse fails, treat as form data
         const params = new URLSearchParams(event.body)
         campaign = params.get('campaign') || campaign
       }
     }
     
-    // Query params as fallback
     if (event.queryStringParameters?.campaign) {
       campaign = event.queryStringParameters.campaign
     }
 
-    // Call the database function
     const { data, error } = await supabase.rpc('increment_campaign', {
       campaign_name: campaign
     })
@@ -59,7 +54,6 @@ export const handler = async (event, context) => {
       }
     }
 
-    // Return minimal response for speed
     return {
       statusCode: 200,
       headers,
