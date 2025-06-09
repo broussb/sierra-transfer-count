@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>IVR Transfer Counter</title>
+  <title>Sierra Transfer Counter</title>
   <style>
     html, body {
       margin: 0;
@@ -191,8 +191,7 @@
   </div>
 
   <script>
-    // UPDATE THIS URL AFTER DEPLOYMENT
-    const DASHBOARD_URL = 'https://your-site.netlify.app/.netlify/functions/dashboard';
+    const DASHBOARD_URL = 'https://sierra-transfer-count.netlify.app/.netlify/functions/dashboard';
     
     const iframe1 = document.getElementById('counter-iframe-1');
     const iframe2 = document.getElementById('counter-iframe-2');
@@ -294,7 +293,7 @@
     iframe2.addEventListener('error', handleError);
     
     function startAutoReload() {
-      reloadInterval = setInterval(loadCounter, 3000); // Faster refresh since it's now much quicker
+      reloadInterval = setInterval(loadCounter, 3000);
     }
     
     document.addEventListener('visibilitychange', function() {
