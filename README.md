@@ -4,7 +4,7 @@ A counter application with campaign tracking, built with Netlify Functions and S
 
 ## Setup
 
-### Environment Variables
+### Environment Variables 3
 
 This application requires Supabase for data storage. You need to set up the following environment variables:
 

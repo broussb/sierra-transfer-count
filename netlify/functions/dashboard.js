@@ -86,6 +86,7 @@ SUPABASE_ANON_KEY=your-supabase-anon-key</pre>
         
         await supabase.from('totals').update({
           total_count: newTotal,
+          last_increment: null,
           updated_at: new Date().toISOString()
         }).eq('id', 1)
       }
