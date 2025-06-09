@@ -1,9 +1,17 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
-)
+// Check for required environment variables
+const SUPABASE_URL = process.env.SUPABASE_URL
+const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY
+
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  console.error('Missing required environment variables: SUPABASE_URL and/or SUPABASE_ANON_KEY')
+}
+
+// Only create the client if we have the required variables
+const supabase = SUPABASE_URL && SUPABASE_ANON_KEY 
+  ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  : null
 
 export const handler = async (event, context) => {
   const headers = {
@@ -15,6 +23,45 @@ export const handler = async (event, context) => {
 
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 200, headers, body: '' }
+  }
+
+  // Check if Supabase is properly configured
+  if (!supabase) {
+    return {
+      statusCode: 500,
+      headers,
+      body: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="UTF-8">
+          <title>Configuration Error</title>
+          <style>
+            body { font-family: Arial, sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; }
+            .error { background: #fee; border: 1px solid #fcc; padding: 20px; border-radius: 5px; }
+            h1 { color: #d00; }
+            pre { background: #f5f5f5; padding: 10px; border-radius: 3px; overflow-x: auto; }
+          </style>
+        </head>
+        <body>
+          <div class="error">
+            <h1>Configuration Error</h1>
+            <p>The Supabase environment variables are not configured.</p>
+            <p>Please set the following environment variables in your Netlify dashboard:</p>
+            <pre>SUPABASE_URL=your-supabase-project-url
+SUPABASE_ANON_KEY=your-supabase-anon-key</pre>
+            <h3>How to fix:</h3>
+            <ol>
+              <li>Go to your Netlify dashboard</li>
+              <li>Navigate to Site settings → Environment variables</li>
+              <li>Add the SUPABASE_URL and SUPABASE_ANON_KEY variables</li>
+              <li>Redeploy your site</li>
+            </ol>
+          </div>
+        </body>
+        </html>
+      `
+    }
   }
 
   try {
