@@ -13,6 +13,8 @@ This application requires Supabase for data storage. You need to set up the foll
    SUPABASE_URL=your-supabase-project-url
    SUPABASE_ANON_KEY=your-supabase-anon-key
    ```
+   
+   **⚠️ IMPORTANT**: Never commit real credentials to your repository. The `.env` file should be in `.gitignore`.
 
 2. **For production on Netlify**:
    - Go to your Netlify dashboard
@@ -20,6 +22,8 @@ This application requires Supabase for data storage. You need to set up the foll
    - Add the following variables:
      - `SUPABASE_URL`: Your Supabase project URL
      - `SUPABASE_ANON_KEY`: Your Supabase anonymous key
+   
+   **Note**: Set these directly in Netlify's dashboard, NOT in your code files.
 
 ### Getting Supabase Credentials
 
@@ -28,6 +32,10 @@ This application requires Supabase for data storage. You need to set up the foll
 3. Go to Settings → API
 4. Copy the "Project URL" (this is your `SUPABASE_URL`)
 5. Copy the "anon public" key (this is your `SUPABASE_ANON_KEY`)
+
+### Important Security Note
+
+The `.env.example` file is just a template. It should contain placeholder values only. Never put real credentials in any file that gets committed to your repository, as Netlify's security scanning will block the deployment.
 
 ### Database Setup
 
