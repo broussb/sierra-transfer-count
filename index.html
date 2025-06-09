@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Sierra Transfer Counter</title>
+  <title>IVR Transfer Counter</title>
   <style>
     html, body {
       margin: 0;
@@ -37,7 +37,7 @@
       top: 0;
       left: 0;
       opacity: 0;
-      transition: opacity 0.8s ease;
+      transition: opacity 0.5s ease;
     }
     
     .counter-iframe.visible {
@@ -191,7 +191,8 @@
   </div>
 
   <script>
-    const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbymWr7cNmIRf08q6Axzg4EIectdIP7sht9fOBW2cWBaVUqAPB-bkPRtz6f58t1V5eA/exec';
+    // UPDATE THIS URL AFTER DEPLOYMENT
+    const DASHBOARD_URL = 'https://your-site.netlify.app/.netlify/functions/dashboard';
     
     const iframe1 = document.getElementById('counter-iframe-1');
     const iframe2 = document.getElementById('counter-iframe-2');
@@ -217,7 +218,7 @@
     
     function loadCounter() {
       const timestamp = new Date().getTime();
-      const url = `${SCRIPT_URL}?t=${timestamp}`;
+      const url = `${DASHBOARD_URL}?t=${timestamp}`;
       
       if (isFirstLoad) {
         activeIframe.src = url;
@@ -247,7 +248,7 @@
       resetButton.classList.add('resetting');
       resetButton.textContent = 'Resetting...';
       
-      const resetUrl = `${SCRIPT_URL}?action=reset&campaign=all&t=${new Date().getTime()}`;
+      const resetUrl = `${DASHBOARD_URL}?action=reset&campaign=all&t=${new Date().getTime()}`;
       resetIframe.src = resetUrl;
       
       window.addEventListener('message', function(event) {
@@ -280,7 +281,7 @@
           activeIframe.classList.add('visible');
           loadingIndicator.classList.add('hidden');
           isFirstLoad = false;
-        }, 300);
+        }, 200);
       }
     });
     
@@ -293,7 +294,7 @@
     iframe2.addEventListener('error', handleError);
     
     function startAutoReload() {
-      reloadInterval = setInterval(loadCounter, 5000);
+      reloadInterval = setInterval(loadCounter, 3000); // Faster refresh since it's now much quicker
     }
     
     document.addEventListener('visibilitychange', function() {
@@ -306,16 +307,6 @@
     
     loadCounter();
     startAutoReload();
-    
-    // Suppress Google security warnings
-    const originalConsoleError = console.error;
-    console.error = function(...args) {
-      const message = args.join(' ');
-      if (message.includes('warden') || message.includes('TransportError')) {
-        return;
-      }
-      originalConsoleError.apply(console, args);
-    };
   </script>
 </body>
 </html>
