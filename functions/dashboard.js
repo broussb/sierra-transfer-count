@@ -18,12 +18,10 @@ export const handler = async (event, context) => {
   }
 
   try {
-    // Handle reset action
     if (event.queryStringParameters?.action === 'reset') {
       const campaign = event.queryStringParameters?.campaign
 
       if (campaign === 'all') {
-        // Reset everything
         await supabase.from('campaigns').delete().neq('id', 0)
         await supabase.from('totals').update({
           total_count: 0,
@@ -31,10 +29,8 @@ export const handler = async (event, context) => {
           updated_at: new Date().toISOString()
         }).eq('id', 1)
       } else if (campaign) {
-        // Reset specific campaign
         await supabase.from('campaigns').delete().eq('name', campaign)
         
-        // Recalculate total
         const { data: campaigns } = await supabase
           .from('campaigns')
           .select('count')
@@ -67,7 +63,6 @@ export const handler = async (event, context) => {
       }
     }
 
-    // Get dashboard data
     const [totalsResult, campaignsResult] = await Promise.all([
       supabase.from('totals').select('*').eq('id', 1).single(),
       supabase.from('campaigns').select('*').order('count', { ascending: false })
@@ -76,7 +71,6 @@ export const handler = async (event, context) => {
     const totals = totalsResult.data || { total_count: 0, last_increment: null }
     const campaigns = campaignsResult.data || []
 
-    // Format total timestamp
     let totalTimeDisplay = 'No calls yet'
     if (totals.last_increment) {
       const diffMinutes = Math.floor((Date.now() - new Date(totals.last_increment).getTime()) / 60000)
@@ -86,7 +80,6 @@ export const handler = async (event, context) => {
       else totalTimeDisplay = new Date(totals.last_increment).toLocaleDateString()
     }
 
-    // Build campaign rows
     let campaignRows = ''
     if (campaigns.length > 0) {
       campaignRows = campaigns.map(campaign => {
