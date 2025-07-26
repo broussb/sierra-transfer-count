@@ -13,18 +13,14 @@ This application requires Supabase for data storage. You need to set up the foll
    SUPABASE_URL=your-supabase-project-url
    SUPABASE_ANON_KEY=your-supabase-anon-key
    ```
-   
-   **⚠️ IMPORTANT**: Never commit real credentials to your repository. The `.env` file should be in `.gitignore`.
 
-2. **For production on Netlify**:
+2. **Netlify**:
    - Go to your Netlify dashboard
    - Navigate to Site settings → Environment variables
    - Add the following variables:
      - `SUPABASE_URL`: Your Supabase project URL
      - `SUPABASE_ANON_KEY`: Your Supabase anonymous key
    
-   **Note**: Set these directly in Netlify's dashboard, NOT in your code files.
-
 ### Getting Supabase Credentials
 
 1. Create a free account at [supabase.com](https://supabase.com)
@@ -33,9 +29,6 @@ This application requires Supabase for data storage. You need to set up the foll
 4. Copy the "Project URL" (this is your `SUPABASE_URL`)
 5. Copy the "anon public" key (this is your `SUPABASE_ANON_KEY`)
 
-### Important Security Note
-
-The `.env.example` file is just a template. It should contain placeholder values only. Never put real credentials in any file that gets committed to your repository, as Netlify's security scanning will block the deployment.
 
 ### Database Setup
 
@@ -92,11 +85,10 @@ Create the following tables in your Supabase project:
 
 1. Push your code to GitHub
 2. Connect your GitHub repository to Netlify
-3. Set the environment variables in Netlify (as described above)
-4. Deploy!
+3. Set the environment variables in Netlify
+4. Deploy
 
 ## Usage
 
 - **Main counter**: Visit your site URL
-- **Dashboard**: Visit `/netlify/functions/dashboard`
 - **Reset campaigns**: Use the dashboard interface to reset individual campaigns or all data
